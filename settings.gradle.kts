@@ -1,1 +1,1 @@
-rootProject.name = "hello-kotlin-ktor"
+rootProject.name = "singular-elixir-318114"

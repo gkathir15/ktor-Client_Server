@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("stdlib-jdk11"))
     implementation(kotlin("reflect"))
     implementation("io.ktor:ktor-server-core:1.5.4")
     implementation("io.ktor:ktor-server-cio:1.5.4")
