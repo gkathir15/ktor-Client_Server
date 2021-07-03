@@ -23,7 +23,7 @@ companion object{
         print(url)
         return url
     }
-    val subs = arrayOf("HolUp","cursedcomments","memes","Memes_Of_The_Dank","dankmemes","ComedyCemetery")
+    val subs = arrayOf("HolUp","cursedcomments","memes","Memes_Of_The_Dank","dankmemes","ComedyCemetery","PornhubComments")
 }
     suspend fun getSubData(lastPage:Int): Feeds {
       //  val subreddit = Gson().fromJson<SubRedditModel>()
