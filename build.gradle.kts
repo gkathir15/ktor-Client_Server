@@ -1,11 +1,10 @@
-import org.gradle.tooling.GradleConnector
-import java.util.concurrent.*
-
 plugins {
     application
-    kotlin("jvm") version "1.5.0"
+    kotlin("jvm") version "1.3.72"
+    id("com.google.cloud.tools.jib") version "2.7.0"
 }
 
+val main_class = "io.ktor.server.netty.EngineMain"
 repositories {
     mavenLocal()
     mavenCentral()
@@ -21,53 +20,47 @@ dependencies {
     implementation("com.google.code.gson:gson:2.8.7")
     runtimeOnly("ch.qos.logback:logback-classic:1.2.3")
 }
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-}
-
-tasks.compileKotlin {
-    kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
-}
-
 application {
-    mainClassName = "WebAppKt"
+    mainClassName = main_class
 
-        applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
-
-
+    applicationDefaultJvmArgs = listOf(
+        "-server",
+        "-Djava.awt.headless=true",
+        "-Xms128m",
+        "-Xmx256m",
+        "-XX:+UseG1GC",
+        "-XX:MaxGCPauseMillis=100"
+    )
 }
 
-// one task that does both the continuous compile and the run
-tasks.create("dev") {
-    doLast {
-        fun fork(task: String, vararg args: String): Future<*> {
-            return Executors.newSingleThreadExecutor().submit {
-                GradleConnector.newConnector()
-                        .forProjectDirectory(project.projectDir)
-                        .connect()
-                        .use {
-                            it.newBuild()
-                                    .addArguments(*args)
-                                    .setStandardError(System.err)
-                                    .setStandardInput(System.`in`)
-                                    .setStandardOutput(System.out)
-                                    .forTasks(task)
-                                    .run()
-                        }
-            }
-        }
+// The projectId can be overridden by adding a `-P projectId=...` flag
+// at the comment line.
+val projectId = project.findProperty("projectId") ?: "singular-elixir-318114"
+val image = "gcr.io/$projectId/ktorreddit"
 
-        val classesFuture = fork("classes", "-t")
-        val runFuture = fork("run")
+jib {
+    to.image = image
 
-        classesFuture.get()
-        runFuture.get()
+    container {
+        ports = listOf("8080")
+        mainClass = main_class
+
+        // good defauls intended for Java 8 (>= 8u191) containers
+        jvmFlags = listOf(
+            "-server",
+            "-Djava.awt.headless=true",
+            "-XX:InitialRAMFraction=2",
+            "-XX:MinRAMFraction=2",
+            "-XX:MaxRAMFraction=2",
+            "-XX:+UseG1GC",
+            "-XX:MaxGCPauseMillis=100",
+            "-XX:+UseStringDeduplication"
+        )
     }
 }
 
-defaultTasks("dev")
-
-tasks.replace("assemble").dependsOn("installDist")
-
-tasks.create("stage").dependsOn("installDist")
+val deploy by tasks.registering(Exec::class) {
+    commandLine = "gcloud run deploy singular-elixir-318114 --image $image --project $projectId --platform managed --region us-central1".split(" ")
+    logger.info(commandLine.toString())
+    dependsOn += tasks.findByName("jib")
+}

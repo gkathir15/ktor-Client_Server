@@ -64,9 +64,6 @@ class Global  {
 fun main() {
     Global.fetchData(0)
     val port = System.getenv("PORT")?.toInt() ?: 8080
+
     embeddedServer(CIO, port, watchPaths = listOf("build"), module = Application::module).start(true)
-
-
-
-
 }
